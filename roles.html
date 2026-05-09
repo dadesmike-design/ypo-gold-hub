@@ -1,0 +1,187 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Board Roles</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .page-tabs{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 20px}
+  .page-tab{border:1px solid var(--line);background:#141414;color:var(--text);border-radius:999px;padding:10px 15px;cursor:pointer;font-weight:800}
+  .page-tab.active{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,.1)}
+  .role-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .role-card{position:relative;text-align:left;min-height:170px;cursor:pointer;transition:.18s transform,.18s border,.18s box-shadow}
+  .role-card:hover{transform:translateY(-3px);border-color:var(--gold);box-shadow:0 18px 44px rgba(0,0,0,.35)}
+  .role-card h3{padding-right:56px}
+  .role-card .holder{margin-top:10px;min-height:22px}
+  .role-badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;align-items:center}
+  .progress-dots{display:flex;gap:5px;align-items:center}
+  .dot{width:10px;height:10px;border-radius:50%;border:1px solid rgba(201,168,76,.75);background:transparent}
+  .dot.filled{background:var(--gold)}
+  .drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.58);z-index:60;display:none}
+  .drawer-backdrop.open{display:block}
+  .drawer{position:fixed;top:0;right:0;height:100vh;width:min(620px,96vw);background:#111;border-left:1px solid var(--gold);box-shadow:-24px 0 70px rgba(0,0,0,.58);z-index:70;transform:translateX(104%);transition:.22s transform;display:flex;flex-direction:column}
+  .drawer.open{transform:translateX(0)}
+  .drawer-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;padding:22px;border-bottom:1px solid var(--line)}
+  .drawer-body{padding:0 22px 22px;overflow:auto}
+  .field-label{display:block;color:var(--muted);font-weight:800;margin:14px 0 7px;font-size:.92rem}
+  .role-jd,.role-notes{min-height:340px;line-height:1.5}
+  .goal-row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;border:1px solid var(--line);background:rgba(22,22,22,.75);padding:11px;border-radius:14px;margin:10px 0}
+  .goal-row input[type="checkbox"]{margin-top:4px;accent-color:var(--gold)}
+  .goal-text{word-break:break-word}
+  .add-row{display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:14px}
+  .handoff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .handoff-grid .full{grid-column:1/-1}
+  .memo-output{min-height:300px;white-space:pre-wrap;line-height:1.55}
+  .doc-section{margin-bottom:18px}
+  .doc-list{display:grid;gap:10px;margin:12px 0}
+  .doc-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border:1px solid var(--line);background:rgba(22,22,22,.72);border-radius:14px;padding:12px}
+  .doc-add{display:grid;grid-template-columns:1fr 1.2fr auto;gap:10px;margin-top:10px}
+  .small-note{font-size:.9rem;color:var(--muted)}
+  @media(max-width:900px){.role-grid,.handoff-grid{grid-template-columns:1fr}.doc-add,.add-row{grid-template-columns:1fr}.doc-row{grid-template-columns:1fr}.drawer{width:100vw}}
+</style>
+</head>
+<body>
+<div id="nav"></div>
+<main class="container">
+  <section class="hero">
+    <div>
+      <h1>Board Roles</h1>
+      <p class="sub">Role job descriptions, SMART goals, season notes, handoffs, and shared board documents.</p>
+    </div>
+  </section>
+
+  <div class="page-tabs" aria-label="Board role navigation">
+    <button class="page-tab active" data-section="roles" onclick="showSection('roles')">Roles</button>
+    <button class="page-tab" data-section="handoff" onclick="showSection('handoff')">Handoff Generator</button>
+    <button class="page-tab" data-section="documents" onclick="showSection('documents')">Documents</button>
+  </div>
+
+  <section id="rolesSection">
+    <div id="roleGrid" class="role-grid"></div>
+  </section>
+
+  <section id="handoffSection" class="hidden">
+    <div class="panel">
+      <h2>Handoff Generator</h2>
+      <p class="sub">Create a warm, useful handoff memo for next season. Saved SMART goals for the selected role are included automatically.</p>
+      <div class="handoff-grid" style="margin-top:16px">
+        <label><span class="field-label">Role being handed off</span><select id="handoffRole" class="input"></select></label>
+        <label><span class="field-label">Outgoing officer name</span><input id="outgoingName" class="input" placeholder="Name"></label>
+        <label class="full"><span class="field-label">Accomplishments this year</span><textarea id="accomplishments" placeholder="What moved forward this season?"></textarea></label>
+        <label class="full"><span class="field-label">Challenges / watch-outs</span><textarea id="challenges" placeholder="What should the incoming officer know to avoid surprises?"></textarea></label>
+        <label class="full"><span class="field-label">Top priorities for next year</span><textarea id="priorities" placeholder="What deserves attention first?"></textarea></label>
+        <label class="full"><span class="field-label">Key contacts</span><textarea id="contacts" placeholder="Names, roles, and why they matter"></textarea></label>
+        <label class="full"><span class="field-label">Anything else to know</span><textarea id="elseKnow" placeholder="Culture, cadence, lessons learned, useful context"></textarea></label>
+      </div>
+      <div class="toolbar">
+        <button class="btn primary" onclick="generateMemo()">Generate memo</button>
+        <button class="btn" onclick="copyMemo()">Copy</button>
+      </div>
+      <p class="small-note">Static site note: enter an Anthropic API key below to generate directly from this browser. The key is stored only in this browser's localStorage.</p>
+      <label><span class="field-label">Anthropic API key</span><input id="anthropicKey" class="input" type="password" placeholder="sk-ant-..." oninput="saveApiKey()"></label>
+      <label><span class="field-label">Generated memo</span><textarea id="memoOutput" class="memo-output" placeholder="The generated handoff memo will appear here."></textarea></label>
+    </div>
+  </section>
+
+  <section id="documentsSection" class="hidden">
+    <div class="panel">
+      <h2>Documents</h2>
+      <p class="sub">Save shared links for governing docs, minutes, role JDs, templates, and resources.</p>
+      <div id="documentsWrap" style="margin-top:18px"></div>
+    </div>
+  </section>
+</main>
+
+<div id="drawerShade" class="drawer-backdrop" onclick="closeDrawer()"></div>
+<aside id="drawer" class="drawer" aria-hidden="true">
+  <div class="drawer-head">
+    <div>
+      <h2 id="drawerTitle">Role</h2>
+      <p class="sub" id="drawerSubtitle"></p>
+    </div>
+    <button class="btn" onclick="closeDrawer()">Close</button>
+  </div>
+  <div class="drawer-body">
+    <div class="tabs">
+      <button class="tab active" data-drawer-tab="jd" onclick="showDrawerTab('jd')">Job Description</button>
+      <button class="tab" data-drawer-tab="goals" onclick="showDrawerTab('goals')">SMART Goals</button>
+      <button class="tab" data-drawer-tab="notes" onclick="showDrawerTab('notes')">Season Notes</button>
+    </div>
+
+    <section id="drawerJd">
+      <label><span class="field-label">Role holder this season</span><input id="roleHolder" class="input" placeholder="Current officer name"></label>
+      <label><span class="field-label">Job description</span><textarea id="roleJd" class="role-jd">Paste or write the job description for this role.</textarea></label>
+      <div class="toolbar"><button class="btn primary" onclick="saveJd()">Save</button></div>
+    </section>
+
+    <section id="drawerGoals" class="hidden">
+      <div id="goalsList"></div>
+      <div class="add-row">
+        <input id="newGoal" class="input" placeholder="Add a SMART goal">
+        <button class="btn primary" onclick="addGoal()">Add</button>
+      </div>
+    </section>
+
+    <section id="drawerNotes" class="hidden">
+      <label><span class="field-label">Season notes</span><textarea id="roleNotes" class="role-notes" placeholder="Key decisions, lessons learned, context for next year's officer"></textarea></label>
+      <div class="toolbar">
+        <button class="btn primary" onclick="saveNotes()">Save</button>
+        <button class="btn" onclick="jumpToHandoff()">Use this role in Handoff</button>
+      </div>
+    </section>
+  </div>
+</aside>
+
+<script src="auth.js"></script>
+<script>
+loadNav('roles');
+footer();
+
+const BOARD_ROLES=['Chapter Chair','Learning Officer','Assistant Learning Officer','Forum Officer','Spouse Forum Officer','Treasurer','Strategic Alliance Officer','Membership Officer','Member Engagement Officer','Youth & Family Officer','Past Chapter Chair','At-Large'];
+const ROLE_KEY='ypo_board_roles_v1';
+const DOC_KEY='ypo_role_documents_v1';
+const API_KEY='ypo_anthropic_api_key';
+const DOC_SECTIONS=['Governing Documents','Meeting Minutes','Role Job Descriptions','Templates & Resources'];
+let activeRole=BOARD_ROLES[0];
+
+function blankRole(){return {holder:'',jd:'Paste or write the job description for this role.',jdSaved:false,goals:[],notes:''}}
+function rolesData(){let data=getStore(ROLE_KEY,{});BOARD_ROLES.forEach(r=>{if(!data[r])data[r]=blankRole()});return data}
+function saveRoles(data){setStore(ROLE_KEY,data)}
+function roleData(role=activeRole){return rolesData()[role]||blankRole()}
+function docsData(){let docs=getStore(DOC_KEY,null);if(!docs){docs=Object.fromEntries(DOC_SECTIONS.map(s=>[s,[]]));setStore(DOC_KEY,docs)}DOC_SECTIONS.forEach(s=>{if(!docs[s])docs[s]=[]});return docs}
+function saveDocs(docs){setStore(DOC_KEY,docs)}
+function completedCount(role){return role.goals.filter(g=>g.done).length}
+function dotCount(role){if(!role.goals.length)return 0;return Math.min(4,Math.ceil((completedCount(role)/role.goals.length)*4))}
+
+function renderRoles(){let data=rolesData();roleGrid.innerHTML=BOARD_ROLES.map(name=>{let r=data[name],filled=dotCount(r);return `<article class="card role-card" onclick="openRole('${escapeHtml(name)}')"><h3>${escapeHtml(name)}</h3><p class="sub holder">${r.holder?`Current: ${escapeHtml(r.holder)}`:'No current officer saved'}</p><div class="role-badges">${r.jdSaved?'<span class="badge green">JD ✓</span>':'<span class="badge">JD pending</span>'}<span class="progress-dots" title="SMART goals progress">${[0,1,2,3].map(i=>`<span class="dot ${i<filled?'filled':''}"></span>`).join('')}</span><span class="sub">${completedCount(r)}/${r.goals.length||0} goals</span></div></article>`}).join('')}
+
+function openRole(name){activeRole=name;let r=roleData(name);drawerTitle.textContent=name;drawerSubtitle.textContent=r.holder?`Current officer: ${r.holder}`:'No officer saved yet';roleHolder.value=r.holder||'';roleJd.value=r.jd||'Paste or write the job description for this role.';roleNotes.value=r.notes||'';showDrawerTab('jd');renderGoals();drawerShade.classList.add('open');drawer.classList.add('open');drawer.setAttribute('aria-hidden','false')}
+function closeDrawer(){drawerShade.classList.remove('open');drawer.classList.remove('open');drawer.setAttribute('aria-hidden','true')}
+function showDrawerTab(tab){document.querySelectorAll('[data-drawer-tab]').forEach(b=>b.classList.toggle('active',b.dataset.drawerTab===tab));drawerJd.classList.toggle('hidden',tab!=='jd');drawerGoals.classList.toggle('hidden',tab!=='goals');drawerNotes.classList.toggle('hidden',tab!=='notes')}
+function saveJd(){let data=rolesData();data[activeRole].holder=roleHolder.value.trim();data[activeRole].jd=roleJd.value.trim()||'Paste or write the job description for this role.';data[activeRole].jdSaved=!!data[activeRole].jd&&data[activeRole].jd!=='Paste or write the job description for this role.';saveRoles(data);renderRoles();openRole(activeRole);toast('Job description saved')}
+function renderGoals(){let r=roleData();goalsList.innerHTML=r.goals.length?r.goals.map(g=>`<div class="goal-row"><input type="checkbox" ${g.done?'checked':''} onchange="toggleGoal('${g.id}',this.checked)"><div class="goal-text ${g.done?'sub':''}">${escapeHtml(g.text)}</div><button class="btn danger" onclick="deleteGoal('${g.id}')">Delete</button></div>`).join(''):'<p class="sub">No SMART goals yet.</p>'}
+function addGoal(){let text=newGoal.value.trim();if(!text)return;let data=rolesData();data[activeRole].goals.push({id:uid('goal'),text,done:false});saveRoles(data);newGoal.value='';renderGoals();renderRoles();toast('Goal added')}
+function toggleGoal(id,done){let data=rolesData();data[activeRole].goals=data[activeRole].goals.map(g=>g.id===id?{...g,done}:g);saveRoles(data);renderGoals();renderRoles()}
+function deleteGoal(id){let data=rolesData();data[activeRole].goals=data[activeRole].goals.filter(g=>g.id!==id);saveRoles(data);renderGoals();renderRoles();toast('Goal deleted')}
+function saveNotes(){let data=rolesData();data[activeRole].notes=roleNotes.value;saveRoles(data);toast('Season notes saved')}
+function jumpToHandoff(){saveNotes();closeDrawer();showSection('handoff');handoffRole.value=activeRole;window.scrollTo({top:0,behavior:'smooth'})}
+
+function showSection(section){document.querySelectorAll('.page-tab').forEach(b=>b.classList.toggle('active',b.dataset.section===section));rolesSection.classList.toggle('hidden',section!=='roles');handoffSection.classList.toggle('hidden',section!=='handoff');documentsSection.classList.toggle('hidden',section!=='documents');if(section==='documents')renderDocs()}
+function fillRoleSelect(){handoffRole.innerHTML=BOARD_ROLES.map(r=>`<option>${escapeHtml(r)}</option>`).join('')}
+function saveApiKey(){localStorage.setItem(API_KEY,anthropicKey.value.trim())}
+async function generateMemo(){let key=anthropicKey.value.trim();if(!key)return toast('Add an Anthropic API key first');let role=handoffRole.value,r=roleData(role);let goals=r.goals.map(g=>`- [${g.done?'x':' '}] ${g.text}`).join('\n')||'No SMART goals saved.';let prompt=`Write a 350–500 word warm, collegial handoff memo addressed to the incoming ${role}. Use a practical board-leadership tone. Include the outgoing officer's context, accomplishments, watch-outs, next-year priorities, key contacts, anything else to know, and the saved SMART goals. Do not invent details beyond what is provided. If a field is sparse, keep that section brief and useful.\n\nRole: ${role}\nCurrent role holder this season: ${r.holder||'Not provided'}\nOutgoing officer name: ${outgoingName.value||'Not provided'}\nAccomplishments this year:\n${accomplishments.value||'Not provided'}\n\nChallenges / watch-outs:\n${challenges.value||'Not provided'}\n\nTop priorities for next year:\n${priorities.value||'Not provided'}\n\nKey contacts:\n${contacts.value||'Not provided'}\n\nAnything else to know:\n${elseKnow.value||'Not provided'}\n\nSaved SMART goals for this role:\n${goals}`;memoOutput.value='Generating memo...';try{let res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});let json=await res.json();if(!res.ok)throw new Error(json.error?.message||'Anthropic request failed');memoOutput.value=(json.content||[]).map(c=>c.text||'').join('\n').trim();toast('Memo generated')}catch(e){memoOutput.value='';toast(e.message||'Memo generation failed')}}
+async function copyMemo(){if(!memoOutput.value.trim())return toast('No memo to copy');await navigator.clipboard.writeText(memoOutput.value);toast('Copied')}
+
+function renderDocs(){let docs=docsData();documentsWrap.innerHTML=DOC_SECTIONS.map(section=>`<section class="doc-section"><h3>${escapeHtml(section)}</h3><div class="doc-list">${docs[section].length?docs[section].map(d=>`<div class="doc-row"><div><a href="${escapeHtml(d.url)}" target="_blank"><b>${escapeHtml(d.name)}</b></a><p class="sub">${escapeHtml(d.url)}</p></div><button class="btn danger" onclick="removeDoc('${escapeHtml(section)}','${d.id}')">Remove</button></div>`).join(''):'<p class="sub">No documents saved.</p>'}</div><div class="doc-add"><input id="docName_${slug(section)}" class="input" placeholder="Document name"><input id="docUrl_${slug(section)}" class="input" placeholder="https://..."><button class="btn primary" onclick="addDoc('${escapeHtml(section)}')">Add</button></div></section>`).join('')}
+function slug(s){return s.replace(/[^a-z0-9]/gi,'')}
+function addDoc(section){let name=document.getElementById('docName_'+slug(section)).value.trim(),url=document.getElementById('docUrl_'+slug(section)).value.trim();if(!name||!url)return toast('Add name and URL');let docs=docsData();docs[section].push({id:uid('doc'),name,url});saveDocs(docs);renderDocs();toast('Document added')}
+function removeDoc(section,id){let docs=docsData();docs[section]=docs[section].filter(d=>d.id!==id);saveDocs(docs);renderDocs();toast('Document removed')}
+
+anthropicKey.value=localStorage.getItem(API_KEY)||'';
+fillRoleSelect();
+renderRoles();
+renderDocs();
+</script>
+</body>
+</html>
