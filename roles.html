@@ -139,6 +139,20 @@ loadNav('roles');
 footer();
 
 const BOARD_ROLES=['Chapter Chair','Learning Officer','Assistant Learning Officer','Forum Officer','Spouse Forum Officer','Treasurer','Strategic Alliance Officer','Membership Officer','Member Engagement Officer','Youth & Family Officer','Past Chapter Chair','At-Large'];
+const CURRENT_OFFICERS={
+  'Chapter Chair':'Nicolette Sharp',
+  'Learning Officer':'Andrew Skotdal',
+  'Assistant Learning Officer':'Jim McDonald',
+  'Forum Officer':'Katerie Schei',
+  'Spouse Forum Officer':'Marnie Bretz',
+  'Treasurer':'Sean Kell',
+  'Strategic Alliance Officer':'Bob Bagga',
+  'Membership Officer':'Steven McArthur',
+  'Member Engagement Officer':'Scott Swerland',
+  'Youth & Family Officer':'Ralph and Annabella Chicco',
+  'Past Chapter Chair':'Dan Ederer, Scott Swerland',
+  'At-Large':'Mike Raskin'
+};
 const ROLE_KEY='ypo_board_roles_v1';
 const DOC_KEY='ypo_role_documents_v1';
 const API_KEY='ypo_anthropic_api_key';
@@ -146,7 +160,7 @@ const DOC_SECTIONS=['Governing Documents','Meeting Minutes','Role Job Descriptio
 let activeRole=BOARD_ROLES[0];
 
 function blankRole(){return {holder:'',jd:'Paste or write the job description for this role.',jdSaved:false,goals:[],notes:''}}
-function rolesData(){let data=getStore(ROLE_KEY,{});BOARD_ROLES.forEach(r=>{if(!data[r])data[r]=blankRole()});return data}
+function rolesData(){let data=getStore(ROLE_KEY,{});BOARD_ROLES.forEach(r=>{if(!data[r])data[r]=blankRole();if(!data[r].holder&&CURRENT_OFFICERS[r])data[r].holder=CURRENT_OFFICERS[r]});return data}
 function saveRoles(data){setStore(ROLE_KEY,data)}
 function roleData(role=activeRole){return rolesData()[role]||blankRole()}
 function docsData(){let docs=getStore(DOC_KEY,null);if(!docs){docs=Object.fromEntries(DOC_SECTIONS.map(s=>[s,[]]));setStore(DOC_KEY,docs)}DOC_SECTIONS.forEach(s=>{if(!docs[s])docs[s]=[]});return docs}
